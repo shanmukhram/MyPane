@@ -1,87 +1,195 @@
+<div align="center">
+
 # Pane
 
-A home launcher for a 2 GB Android TV (built for a Xiaomi Mi TV, Android 10, 1080p).
-Glass look, spring motion, no dependencies. The release APK is about 50 KB.
+**A glass home screen for Android TV that fits in 53 KB and idles at 31 MB.**
 
-## What it does
+Built for a 2 GB TV that had become painfully slow. Free and open source.
 
-- **Home:** wallpaper, a time/date capsule, top buttons (network, search, launcher
-  settings, system settings) and a glass dock with up to six apps.
-- **Apps:** the page continues below the dock. The next row peeks in through a dark
-  fade; Down (or the round apps button) glides into the full grid, Up or Back returns.
-- **TV inputs:** the round inputs button lists HDMI/AV/tuner inputs from
-  `TvInputManager` and hands off to the TV's own live-TV app.
-- **Long-press an app** (or press Menu): open, add to / remove from dock, move, hide,
-  app info, uninstall.
-- **Search:** press Search, or just start typing on a keyboard or phone remote.
-- **Wallpaper:** eight built-in gradients, or any photo in the TV's Pictures or
-  Download folder or on a USB drive.
-- **Pane settings:** wallpaper, reduce motion, hidden apps, backup / restore
-  (`Download/pane-backup.json`), accessibility settings shortcut.
-- New installs appear automatically; removed apps disappear.
+<img src="docs/home.jpg" alt="Pane home screen: wallpaper, time capsule, and a glass dock of apps" width="100%">
 
-## Build and install
+</div>
 
-Needs JDK 17, the Android SDK (platform 34, build-tools 34) and Gradle 8.9.
+<br>
+
+## Why
+
+Cheap TVs ship with 2 GB of RAM and a launcher that eats a good part of it. Every
+megabyte the home screen holds is a megabyte your streaming app does not get, and
+that is what makes the whole TV feel slow.
+
+Pane is a launcher written to use as little as possible and never drop a frame.
+
+| Measured on the same TV | Idle memory | Graphics memory |
+|---|---:|---:|
+| **Pane** | **31 MB** | **12 MB** |
+| A Jetpack Compose launcher | 71 to 118 MB | 35 to 58 MB |
+| Stock Google TV launcher | 140 MB | |
+| Xiaomi PatchWall | 173 MB | |
+
+| | Pane | Compose launcher |
+|---|---:|---:|
+| Frames that miss 60 fps while navigating | **0.3%** | 100% |
+| Median frame time | **7 ms** | 34 ms |
+| Cold start | **0.44 s** | 0.46 s |
+| App size | **53 KB** | |
+
+That is roughly 4x to 5x less memory than the launchers the TV came with, and
+navigation that stays under half of the 16.7 ms frame budget.
+
+<sub>Xiaomi Mi TV, MediaTek quad Cortex-A55, 2 GB RAM, Android 10, 1080p. Memory is PSS from
+`dumpsys meminfo` 15 s after pressing Home. Frame numbers are from `dumpsys gfxinfo`.</sub>
+
+<br>
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/apps.jpg" alt="The page scrolled into the full grid of apps"></td>
+    <td width="50%"><img src="docs/menu.jpg" alt="Long-press menu for an app"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Press Down and the page glides into every app</sub></td>
+    <td align="center"><sub>Hold OK on any app: dock, move, hide, info</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/inputs.jpg" alt="TV inputs list with HDMI, AV and tuner"></td>
+    <td><img src="docs/search.jpg" alt="Searching apps by typing"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Switch HDMI, AV and antenna from Home</sub></td>
+    <td align="center"><sub>Start typing to search</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/wallpaper.jpg" alt="Wallpaper picker"></td>
+    <td><img src="docs/settings.jpg" alt="Pane settings"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Eight gradients, or any photo of your own</sub></td>
+    <td align="center"><sub>A short settings list, nothing buried</sub></td>
+  </tr>
+</table>
+
+<br>
+
+## What you get
+
+- **A dock for the apps you actually open.** Up to six, sized to fit. The focused
+  app is bright and lifted; everything else steps back.
+- **Every other app one press away.** The page continues below the dock. The next
+  row peeks in through a dark fade so you know it is there.
+- **TV inputs.** HDMI, AV and tuner, with their connection state, straight from Home.
+- **Search by typing.** From a keyboard or a phone remote app, just start typing.
+- **Your wallpaper.** Eight built-in gradients, or any photo from the TV's Pictures
+  or Download folder or a USB drive.
+- **Tidy up.** Move, hide, uninstall, or open app info from a long-press menu.
+- **Backup and restore** of your layout as one small JSON file.
+- **Reduce motion** switch, screen-reader labels on everything, and it follows the
+  system font size.
+- **Quiet by design.** No account, no ads, no analytics, no background services,
+  and no internet permission at all.
+
+<br>
+
+## Install
+
+You need a computer with [adb](https://developer.android.com/tools/releases/platform-tools)
+and a TV with developer options and network debugging turned on.
 
 ```bash
-gradle :app:assembleRelease
-adb install -r app/build/outputs/apk/release/app-release.apk
+adb connect <your-tv-ip>:5555
+adb install -r app-release.apk
 adb shell cmd package set-home-activity tv.pane.launcher/.MainActivity
 ```
 
-## Tech decision: Kotlin and plain Views, no Rust, no Compose
+Press Home. That's it.
 
-Measured on the TV, a frame costs under 1 ms on the app's own thread and 4 to 8 ms
-issuing drawing to the GPU. The language the app logic is written in is not where
-the time goes, so Rust would not make it faster. A custom-rendered Rust UI would
-also have to rebuild focus handling and TalkBack support that Views give for free.
+One optional step makes cold starts twice as fast right away. Android does this by
+itself after a day or so; this just does it now:
 
-Compose was ruled out by the baseline: the Compose launcher this replaces idles at
-113 to 118 MB with 58 MB of graphics memory. Plain Views with one custom-drawn View
-per tile idle at about a quarter of that.
+```bash
+adb shell cmd package compile -m speed -f tv.pane.launcher
+```
 
-No Rust/NDK hot path turned up. The one CPU-heavy job, blurring the wallpaper, runs
-once per wallpaper change on a 240x135 bitmap and takes milliseconds.
+To go back, set your old launcher as Home again with the same `set-home-activity`
+command, or uninstall Pane with `adb uninstall tv.pane.launcher`.
 
-## How it stays light and smooth
+### Build it yourself
 
-- **No live blur.** API 29 has no `RenderEffect`. The wallpaper is blurred once,
-  cached on disk, and each glass panel draws the matching crop of a pre-tinted copy
-  in a single pass.
-- **Springs run on `Choreographer`,** not `ValueAnimator`, so they ignore the system
-  animator scale (which is 0 on this TV) and only ever change transform and alpha.
-- **One View per tile,** drawing its own artwork and label. Artwork is rendered at
-  display size, held as GPU-only bitmaps in a 6 MB LRU, cached on disk, and only
-  attached to tiles on or near the screen. Everything is dropped when Home goes to
-  the background.
-- **No full-screen fades or zooms.** They measured 45 to 100% late frames on this
-  GPU, so the apps view is a scroll of one page rather than a panel that opens.
-- No services, no network permission, no analytics.
+JDK 17, the Android SDK (platform 34, build-tools 34) and Gradle 8.9. There are no
+other dependencies to fetch.
 
-## Test hook
+```bash
+gradle :app:assembleRelease
+```
 
-`adb shell am start -n tv.pane.launcher/.MainActivity --ei stress 150` pads the grid
-with 150 clone tiles (each with its own artwork) for memory testing; `--ei stress 0`
-turns it off.
+The APK lands in `app/build/outputs/apk/release/`.
 
-## Measured on the TV
+<br>
 
-Idle is 15 s after pressing Home. Late frames are from `dumpsys gfxinfo` while
-navigating with the D-pad. The launcher it replaced was a Jetpack Compose launcher.
+## Using it
 
-| | Pane | Compose launcher | Target |
-|---|---|---|---|
-| Idle memory (PSS) | 30.7 MB | 71 to 118 MB | 40 MB or less |
-| Idle graphics memory | 12.0 MB | 35 to 58 MB | 25 MB or less |
-| Late frames while navigating | 0.3% | 100% | under 5% |
-| Median frame time | 7 ms | 34 ms | 16.7 ms or less |
-| Cold start (AOT-compiled) | 420 to 452 ms | 454 to 469 ms | |
-| APK size | 53 KB | | |
+| On the remote | What happens |
+|---|---|
+| Left / Right | Move along the dock |
+| Down | Glide into all apps |
+| Up or Back | Return to the dock |
+| OK | Open |
+| Hold OK, or Menu | App menu: add to dock, move, hide, info, uninstall |
+| Round grid button | Jump to all apps |
+| Round screen button | TV inputs |
 
-With 166 tiles (16 real apps plus 150 clones) memory held at 41.7 to 42.1 MB across
-ten rounds of app switch plus a full scroll, with no upward drift.
+<br>
 
-Right after `adb install` the app runs uncompiled and cold start is about 0.9 s.
-Android compiles it in the background later, or force it with
-`adb shell cmd package compile -m speed -f tv.pane.launcher`.
+## How it stays this light
+
+- **Plain Android Views, no UI framework.** One custom-drawn View per tile, no
+  nested layouts, no libraries. That is where most of the memory saving comes from.
+- **Glass without live blur.** The wallpaper is blurred once and cached. Each glass
+  panel draws the matching crop of that copy in a single pass, so there is no
+  per-frame blur at all.
+- **Springs on the display's own clock.** Motion is driven from `Choreographer` and
+  only ever changes position, scale and opacity, so it keeps working even when
+  system animations are switched off.
+- **Artwork only where you can see it.** Banners are rendered at display size, kept
+  as GPU-only bitmaps in a 6 MB cache, saved to disk, and released the moment Home
+  goes to the background.
+- **No full-screen fades or zooms.** On a low-end TV GPU they cannot hold 60 fps.
+  Moving things can, which is why apps scroll into view instead of a panel opening.
+
+Kotlin was a deliberate choice over Rust. Measured on the TV, a frame spends under
+1 ms in the app's own code and 4 to 8 ms issuing drawing to the GPU, so a faster
+language would not make it faster, and a custom renderer would have to rebuild the
+focus handling and screen-reader support that Views provide.
+
+<br>
+
+## Good to know
+
+- Built and tested on one TV: a Xiaomi Mi TV on Android 10. It should run on any
+  Android TV from Android 8 up, but other models are untested. Reports are welcome.
+- Input switching hands off to the TV's own live-TV app, so it depends on the
+  manufacturer shipping one.
+- The very first scroll after a restart can hitch for a moment while the GPU
+  prepares artwork. After that it is smooth.
+- With 166 apps installed, memory held steady at about 42 MB through ten rounds of
+  opening an app, coming back and scrolling the whole list.
+
+<br>
+
+## Contributing
+
+Issues and pull requests are welcome, especially results from other TVs. Please
+keep the two rules the project lives by: no new dependencies, and measure before
+and after.
+
+## Credits
+
+Wallpapers in the screenshots are photos by Cristina Gottardi, Jonatan Pie and
+Urban Vintage on [Unsplash](https://unsplash.com). They are not part of this
+repository. App banners belong to their respective owners.
+
+## License
+
+[MIT](LICENSE). Use it, change it, ship it.
