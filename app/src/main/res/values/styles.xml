@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Pane" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/base</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:colorAccent">#FFFFFFFF</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+    <color name="base">#FF0B0D14</color>
+</resources>
