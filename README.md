@@ -94,12 +94,14 @@ navigation that stays under half of the 16.7 ms frame budget.
 
 ## Install
 
-You need a computer with [adb](https://developer.android.com/tools/releases/platform-tools)
-and a TV with developer options and network debugging turned on.
+Download **[Pane-1.0.apk](https://github.com/shanmukhram/MyPane/releases/latest)** from
+the latest release. You need a computer with
+[adb](https://developer.android.com/tools/releases/platform-tools) and a TV with
+developer options and network debugging turned on.
 
 ```bash
 adb connect <your-tv-ip>:5555
-adb install -r app-release.apk
+adb install -r Pane-1.0.apk
 adb shell cmd package set-home-activity tv.pane.launcher/.MainActivity
 ```
 
